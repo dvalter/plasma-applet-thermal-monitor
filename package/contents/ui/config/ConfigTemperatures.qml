@@ -272,7 +272,7 @@ Item {
                 }
                 enabled: addResourceDialog.virtualSelected
                 Layout.preferredWidth: tableWidth/2
-                Layout.preferredHeight: tableWidth/2
+                Layout.preferredHeight: tableHeight/2
             }
 
             Item {
