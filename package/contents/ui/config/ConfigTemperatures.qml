@@ -590,6 +590,39 @@ Item {
     }
 
     PlasmaCore.DataSource {
+        id: smartctlDS
+        engine: 'executable'
+
+        connectedSources: ['sudo -n smartctl --scan-open --json=c | jq -r ".devices | map(.name)"']
+
+        property bool prepared: false
+
+        onNewData: {
+            if (!prepared)
+            {
+                if (data['exit code'] > 0) {
+                    print('New data incomming. Source: ' + sourceName + ', ERROR: ' + data.stderr);
+                    return
+                }
+
+                print('New data incomming. Source: ' + sourceName + ', data: ' + data.stdout);
+
+                var pathsToCheck = ModelUtils.parseSmartctlPaths(data.stdout)
+                pathsToCheck.forEach(function (pathObj) {
+                    var cmd = ModelUtils.SMARTCTL_VIRTUAL_PATH_PREFIX + pathObj.name
+                    comboboxModel.append({
+                        text: cmd,
+                        val: cmd
+                    })
+                })
+
+                prepared = true
+
+            }
+        }
+    }
+
+    PlasmaCore.DataSource {
         id: nvidiaDS
         engine: 'executable'
 

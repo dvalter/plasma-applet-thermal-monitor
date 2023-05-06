@@ -218,6 +218,10 @@ Item {
             nvmeDS.connectedSources = []
         }
 
+        if (smartctlDS.connectedSources === undefined) {
+            smartctlDS.connectedSources = []
+        }
+
         systemmonitorSourcesToAdd.length = 0
         systemmonitorDS.connectedSources.length = 0
         udisksDS.connectedSources.length = 0
@@ -226,6 +230,8 @@ Item {
         atiDS.connectedSources.length = 0
         nvmeDS.connectedSources.length = 0
         nvmeDS.cmdSourceBySourceName = {}
+        smartctlDS.connectedSources.length = 0
+        smartctlDS.cmdSourceBySourceName = {}
 
         ModelUtils.initModels(resources, temperatureModel)
 
@@ -291,6 +297,14 @@ Item {
             dbgprint('adding source to nvmeDS: ' + cmdSource)
 
             addToSourcesOfDatasource(nvmeDS, cmdSource)
+        } else if (source.indexOf('smartctl') === 0) {
+            var diskLabel = source.substring('smartctl'.length)
+            var cmdSource = ModelUtils.getSmartctlTemperatureCmd(diskLabel)
+            smartctlDS.cmdSourceBySourceName[cmdSource] = source
+
+            dbgprint('adding source to smartctlDS: ' + cmdSource)
+
+            addToSourcesOfDatasource(smartctlDS, cmdSource)
         }
         else {
 
@@ -387,6 +401,27 @@ Item {
                 dbgprint('new data error: ' + data.stderr)
             } else {
                 temperature = ModelUtils.getCelsiaFromNvmeStdout(data.stdout)
+            }
+
+            ModelUtils.updateTemperatureModel(temperatureModel, cmdSourceBySourceName[sourceName], temperature)
+        }
+        interval: updateInterval
+    }
+
+    PlasmaCore.DataSource {
+        id: smartctlDS
+        engine: 'executable'
+        property var cmdSourceBySourceName
+
+        onNewData: {
+
+            dbgprint('smartctl new data - valid: ' + valid + ', stdout: ' + data.stdout)
+
+            var temperature = 0
+            if (data['exit code'] > 0) {
+                dbgprint('new data error: ' + data.stderr)
+            } else {
+                temperature = ModelUtils.getCelsiaFromSmartctlStdout(data.stdout)
             }
 
             ModelUtils.updateTemperatureModel(temperatureModel, cmdSourceBySourceName[sourceName], temperature)

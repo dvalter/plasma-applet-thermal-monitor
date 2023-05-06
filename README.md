@@ -59,6 +59,13 @@ $ sudo rm /usr/share/kservices5/plasma-applet-org.kde.thermalMonitor.desktop
 
     - `ksysguard`
     - `lm_sensors`
+
+- **Smartctl Sources missing**
+
+  Make sure following package are installed:
+
+    - `smartmontools` (make sure that it may be run with `sudo` without password. Just add following line to `/etc/sudoers`: `$USERNAME ALL=NOPASSWD: /usr/bin/smartctl`)
+
 # LICENSE
 
 This project is licensed under the [GNU General Public License v2.0](https://www.gnu.org/licenses/gpl-2.0.html) and is therefore Free Software. A copy of the license can be found in the [LICENSE file](LICENSE).
