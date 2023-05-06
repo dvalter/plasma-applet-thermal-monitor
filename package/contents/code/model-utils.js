@@ -186,7 +186,7 @@ function parseNvmePaths(nvmePaths) {
     devices.forEach(function (path) {
         if (path) {
             resultObjects.push({
-                cmd: NVME_DEVICES_CMD.replace('{path}', path),
+                cmd: NVME_TEMPERATURE_CMD_PATTERN.replace('{path}', path),
                 name: path
             })
         }
@@ -204,6 +204,36 @@ function getCelsiaFromNvmeStdout(stdout) {
 
 function getNvmeTemperatureCmd(diskLabel) {
     return NVME_TEMPERATURE_CMD_PATTERN.replace('{path}', diskLabel)
+}
+
+var SMARTCTL_DEVICES_CMD = 'sudo -n smartctl --scan-open --json=c | jq -r ".devices | map(.name)"'
+var SMARTCTL_TEMPERATURE_CMD_PATTERN = 'sudo -n smartctl -A {path} --json=c | jq -r ".temperature.current"'
+var SMARTCTL_VIRTUAL_PATH_PREFIX = 'smartctl'
+
+function parseSmartctlPaths(scPaths) {
+    var devices = JSON.parse(scPaths)
+    var resultObjects = []
+    devices.forEach(function (path) {
+        if (path) {
+            resultObjects.push({
+                cmd: SMARTCTL_TEMPERATURE_CMD_PATTERN.replace('{path}', path),
+                name: path
+            })
+        }
+    })
+    return resultObjects
+}
+
+function getCelsiaFromSmartctlStdout(stdout) {
+    var temperature = parseFloat(stdout)
+    if (temperature <= 0) {
+        return 0
+    }
+    return Math.round(temperature)
+}
+
+function getSmartctlTemperatureCmd(diskLabel) {
+    return SMARTCTL_TEMPERATURE_CMD_PATTERN.replace('{path}', diskLabel)
 }
 
 function toCelsia(kelvin) {
