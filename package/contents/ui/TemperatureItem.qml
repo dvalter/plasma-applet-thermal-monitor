@@ -14,10 +14,9 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http: //www.gnu.org/licenses/>.
  */
-import QtQuick 2.2
-import QtQuick.Layouts 1.1
-import QtGraphicalEffects 1.0
-import org.kde.plasma.components 2.0 as PlasmaComponents
+import QtQuick
+import QtQuick.Layouts
+import org.kde.plasma.components as PlasmaComponents
 import "../code/temperature-utils.js" as TemperatureUtils
 
 Item {
@@ -83,14 +82,14 @@ Item {
         }
     }
 
-    DropShadow {
-        anchors.fill: labels
-        radius: enableLabelDropShadow ? 3 : 0
-        spread: 0.8
-        fast: true
-        color: theme.backgroundColor
-        source: labels
-        visible: enableLabelDropShadow
-    }
+    // DropShadow {
+    //     anchors.fill: labels
+    //     radius: enableLabelDropShadow ? 3 : 0
+    //     spread: 0.8
+    //     fast: true
+    //     color: theme.backgroundColor
+    //     source: labels
+    //     visible: enableLabelDropShadow
+    // }
 
 }

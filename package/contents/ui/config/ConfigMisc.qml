@@ -1,6 +1,6 @@
-import QtQuick 2.2
-import QtQuick.Controls 1.3
-import QtQuick.Layouts 1.1
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Layouts
 
 Item {
 
@@ -11,13 +11,13 @@ Item {
     onCfg_temperatureUnitChanged: {
         switch (cfg_temperatureUnit) {
         case 0:
-            temperatureTypeGroup.current = temperatureTypeRadioCelsius;
+            temperatureTypeGroup.checkedButton = temperatureTypeRadioCelsius;
             break;
         case 1:
-            temperatureTypeGroup.current = temperatureTypeRadioFahrenheit;
+            temperatureTypeGroup.checkedButton = temperatureTypeRadioFahrenheit;
             break;
         case 2:
-            temperatureTypeGroup.current = temperatureTypeRadioKelvin;
+            temperatureTypeGroup.checkedButton = temperatureTypeRadioKelvin;
             break;
         default:
         }
@@ -28,7 +28,7 @@ Item {
         cfg_temperatureUnitChanged()
     }
 
-    ExclusiveGroup {
+    ButtonGroup {
         id: temperatureTypeGroup
     }
 
@@ -42,10 +42,35 @@ Item {
         }
         SpinBox {
             id: updateIntervalSpinBox
-            decimals: 1
-            stepSize: 0.1
-            minimumValue: 0.1
-            suffix: i18nc('Abbreviation for seconds', 's')
+            from: decimalToInt(0.1)
+
+            stepSize: 1
+            editable: true
+
+            property int decimals: 1
+            property real realValue: value / decimalFactor
+            readonly property int decimalFactor: Math.pow(10, decimals)
+
+            function decimalToInt(decimal) {
+                return decimal * decimalFactor
+            }
+
+            validator: DoubleValidator {
+                bottom: Math.min(updateIntervalSpinBox.from, updateIntervalSpinBox.to)
+                top:  Math.max(updateIntervalSpinBox.from, updateIntervalSpinBox.to)
+                decimals: updateIntervalSpinBox.decimals
+                notation: DoubleValidator.StandardNotation
+            }
+            
+            textFromValue: function(value, locale) {
+                let num = Number(value / decimalFactor).toLocaleString(locale, 'f', updateIntervalSpinBox.decimals)
+                let suffix = i18nc('Abbreviation for seconds', 's')
+                return "%1 %2".arg(num).arg(suffix)
+            }
+
+            valueFromText: function(text, locale) {
+                return Math.round(Number.fromLocaleString(locale, text) * decimalFactor)
+            }
         }
 
         Item {
@@ -60,7 +85,7 @@ Item {
         }
         RadioButton {
             id: temperatureTypeRadioCelsius
-            exclusiveGroup: temperatureTypeGroup
+            ButtonGroup.group: temperatureTypeGroup
             text: i18n("°C")
             onCheckedChanged: if (checked) cfg_temperatureUnit = 0
         }
@@ -71,7 +96,7 @@ Item {
         }
         RadioButton {
             id: temperatureTypeRadioFahrenheit
-            exclusiveGroup: temperatureTypeGroup
+            ButtonGroup.group: temperatureTypeGroup
             text: i18n("°F")
             onCheckedChanged: if (checked) cfg_temperatureUnit = 1
         }
@@ -82,7 +107,7 @@ Item {
         }
         RadioButton {
             id: temperatureTypeRadioKelvin
-            exclusiveGroup: temperatureTypeGroup
+            ButtonGroup.group: temperatureTypeGroup
             text: i18n("K")
             onCheckedChanged: if (checked) cfg_temperatureUnit = 2
         }

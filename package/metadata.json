@@ -1,0 +1,34 @@
+{
+    "KPlugin": {
+        "Authors": [
+            {
+                "Email": "agurenko@protonmail.com",
+                "Name": "Alex Gurenko"
+            }
+        ],
+        "Category": "System Information",
+        "Description": "Plasmoid for monitoring CPU, GPU and HDD temperature.",
+        "Description[sr@ijekavian]": "Плазмоид за праћење температуре ЦПУ-а, ГПУ-а и тврдог диска.",
+        "Description[sr@ijekavianlatin]": "Plazmoid za praćenje temperature CPU-a, GPU-a i tvrdog diska.",
+        "Description[sr@latin]": "Plazmoid za praćenje temperature CPU-a, GPU-a i tvrdog diska.",
+        "Description[sr]": "Плазмоид за праћење температуре ЦПУ-а, ГПУ-а и тврдог диска.",
+        "Icon": "/usr/share/plasma/plasmoids/org.kde.thermalMonitor/contents/images/thermal-monitor.svg",
+        "Id": "org.kde.thermalMonitor",
+        "License": "GPL2",
+        "Name": "Thermal Monitor",
+        "Name[sr@ijekavian]": "Праћење температуре",
+        "Name[sr@ijekavianlatin]": "Praćenje temperature",
+        "Name[sr@latin]": "Praćenje temperature",
+        "Name[sr]": "Праћење температуре",
+        "ServiceTypes": [
+            "Plasma/Applet"
+        ],
+        "Version": "1.3.0",
+        "Website": "https://gitlab.com/agurenko/plasma-applet-thermal-monitor"
+    },
+    "X-KDE-ParentApp": "",
+    "X-Plasma-API": "declarativeappletscript",
+    "X-Plasma-API-Minimum-Version": "6.0",
+    "X-Plasma-MainScript": "ui/main.qml",
+    "X-Plasma-RemoteLocation": ""
+}

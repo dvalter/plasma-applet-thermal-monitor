@@ -14,15 +14,16 @@
  * You should have received a copy of the GNU General Public License
  * along with this program.  If not, see <http: //www.gnu.org/licenses/>.
  */
-import QtQuick 2.2
-import QtQuick.Layouts 1.1
-import QtGraphicalEffects 1.0
-import org.kde.plasma.plasmoid 2.0
-import org.kde.plasma.core 2.0 as PlasmaCore
+import QtQuick
+import QtQuick.Layouts
+import org.kde.plasma.plasma5support as Plasma5Support
+import org.kde.plasma.plasmoid
+import org.kde.plasma.core as PlasmaCore
+import org.kde.kirigami as Kirigami
 import "../code/model-utils.js" as ModelUtils
 import "../code/config-utils.js" as ConfigUtils
 
-Item {
+PlasmoidItem {
     id: main
 
     anchors.fill: parent
@@ -43,10 +44,10 @@ Item {
     property double itemWidth:  0
     property double itemHeight: 0
 
-    property color warningColor: Qt.tint(theme.textColor, '#60FF0000')
-    property var textFontFamily: theme.defaultFont.family
+    property color warningColor: Qt.tint(Kirigami.Theme.textColor, '#60FF0000')
+    // property var textFontFamily: .defaultFont.family
 
-    Plasmoid.preferredRepresentation: Plasmoid.fullRepresentation
+    preferredRepresentation: fullRepresentation
 
     property double aliasFontSize: itemHeight * plasmoid.configuration.aliasFontSize * 0.01
     property double temperatureFontSize: itemHeight * plasmoid.configuration.temperatureFontSize * 0.01
@@ -69,7 +70,7 @@ Item {
     Layout.preferredWidth: widgetWidth
     Layout.preferredHeight: widgetHeight
 
-    property bool debugLogging: false
+    property bool debugLogging: true // FIXME
 
     function dbgprint(msg) {
         if (!debugLogging) {
@@ -144,8 +145,16 @@ Item {
         id: temperatureModel
     }
 
+    
+    Plasmoid.contextualActions: [
+        PlasmaCore.Action {
+            text: i18n('Reload Temperature Sources')
+            icon.name: 'system-reboot'
+            onTriggered: reloadAllSources
+        }
+    ]
+        
     Component.onCompleted: {
-        plasmoid.setAction('reloadSources', i18n('Reload Temperature Sources'), 'system-reboot');
         reloadAllSources()
         setWidgetSize()
     }
@@ -198,9 +207,9 @@ Item {
             systemmonitorSourcesToAdd = []
         }
 
-        if (systemmonitorDS.connectedSources === undefined) {
-            systemmonitorDS.connectedSources = []
-        }
+        // if (systemmonitorDS.connectedSources === undefined) {
+        //     systemmonitorDS.connectedSources = []
+        // }
 
         if (udisksDS.connectedSources === undefined) {
             udisksDS.connectedSources = []
@@ -223,7 +232,7 @@ Item {
         }
 
         systemmonitorSourcesToAdd.length = 0
-        systemmonitorDS.connectedSources.length = 0
+        // systemmonitorDS.connectedSources.length = 0
         udisksDS.connectedSources.length = 0
         udisksDS.cmdSourceBySourceName = {}
         nvidiaDS.connectedSources.length = 0
@@ -331,47 +340,47 @@ Item {
         datasource.connectedSources.push(sourceName)
     }
 
-    PlasmaCore.DataSource {
-        id: systemmonitorDS
-        engine: 'systemmonitor'
+    // Plasma5Support.DataSource {
+    //     id: systemmonitorDS
+    //     engine: 'systemmonitor'
+    // 
+    //     property string lmSensorsStart: 'lmsensors/'
+    //     property string acpiStart: 'acpi/Thermal_Zone/'
+    // 
+    //     onSourceAdded: {
+    // 
+    //         if (source.indexOf(lmSensorsStart) === 0 || source.indexOf(acpiStart) === 0) {
+    // 
+    //             systemmonitorAvailableSources.push(source)
+    //             var staIndex = systemmonitorSourcesToAdd.indexOf(source)
+    //             if (staIndex > -1) {
+    //                 addToSourcesOfDatasource(systemmonitorDS, source)
+    //                 systemmonitorSourcesToAdd.splice(staIndex, 1)
+    //             }
+    // 
+    //         }
+    // 
+    //     }
+    // 
+    //     onNewData: (sourceName, data) => {
+    //         var temperature = 0
+    //         if (data.value === undefined) {
+    //             dbgprint('data for source ' + sourceName + ' not yet available')
+    //         } else {
+    //             temperature = parseFloat(data.value)
+    //         }
+    //         ModelUtils.updateTemperatureModel(temperatureModel, sourceName, temperature)
+    //     }
+    //     interval: updateInterval
+    // }
 
-        property string lmSensorsStart: 'lmsensors/'
-        property string acpiStart: 'acpi/Thermal_Zone/'
-
-        onSourceAdded: {
-
-            if (source.indexOf(lmSensorsStart) === 0 || source.indexOf(acpiStart) === 0) {
-
-                systemmonitorAvailableSources.push(source)
-                var staIndex = systemmonitorSourcesToAdd.indexOf(source)
-                if (staIndex > -1) {
-                    addToSourcesOfDatasource(systemmonitorDS, source)
-                    systemmonitorSourcesToAdd.splice(staIndex, 1)
-                }
-
-            }
-
-        }
-
-        onNewData: {
-            var temperature = 0
-            if (data.value === undefined) {
-                dbgprint('data for source ' + sourceName + ' not yet available')
-            } else {
-                temperature = parseFloat(data.value)
-            }
-            ModelUtils.updateTemperatureModel(temperatureModel, sourceName, temperature)
-        }
-        interval: updateInterval
-    }
-
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: udisksDS
         engine: 'executable'
 
         property var cmdSourceBySourceName
 
-        onNewData: {
+        onNewData: (sourceName, data) => {
 
             dbgprint('udisks new data - valid: ' + valid + ', stdout: ' + data.stdout)
 
@@ -387,12 +396,12 @@ Item {
         interval: updateInterval
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: nvmeDS
         engine: 'executable'
         property var cmdSourceBySourceName
 
-        onNewData: {
+        onNewData: (sourceName, data) => {
 
             dbgprint('nvme new data - valid: ' + valid + ', stdout: ' + data.stdout)
 
@@ -408,12 +417,12 @@ Item {
         interval: updateInterval
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: smartctlDS
         engine: 'executable'
         property var cmdSourceBySourceName
 
-        onNewData: {
+        onNewData: (sourceName, data) => {
 
             dbgprint('smartctl new data - valid: ' + valid + ', stdout: ' + data.stdout)
 
@@ -429,13 +438,13 @@ Item {
         interval: updateInterval
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: nvidiaDS
         engine: 'executable'
 
         property string nvidiaSource: 'nvidia-smi --query-gpu=temperature.gpu --format=csv,noheader'
 
-        onNewData: {
+        onNewData: (sourceName, data) => {
             var temperature = 0
             if (data['exit code'] > 0) {
                 dbgprint('new data error: ' + data.stderr)
@@ -448,13 +457,13 @@ Item {
         interval: updateInterval
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: atiDS
         engine: 'executable'
 
         property string atiSource: 'aticonfig --od-gettemperature | tail -1 | cut -c 43-44'
 
-        onNewData: {
+        onNewData: (sourceName, data) => {
             var temperature = 0
             if (data['exit code'] > 0) {
                 dbgprint('new data error: ' + data.stderr)

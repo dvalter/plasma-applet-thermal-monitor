@@ -1,10 +1,13 @@
-import QtQuick 2.2
-import QtQuick.Controls 1.3
-import QtQuick.Dialogs 1.2
-import QtQuick.Layouts 1.1
-import org.kde.plasma.core 2.0 as PlasmaCore
+import QtQuick
+import QtQuick.Controls
+import QtQuick.Dialogs
+import QtQuick.Layouts
+import org.kde.plasma.core as PlasmaCore
+import org.kde.plasma.plasma5support as Plasma5Support
 import "../../code/config-utils.js" as ConfigUtils
 import "../../code/model-utils.js" as ModelUtils
+import Qt.labs.qmlmodels
+import org.kde.kirigami as Kirigami
 
 Item {
     id: resourcesConfigPage
@@ -15,13 +18,28 @@ Item {
     property string cfg_resources
     property alias cfg_warningTemperature: warningTemperatureSpinBox.value
     property alias cfg_meltdownTemperature: meltdownTemperatureSpinBox.value
+    property var backgroundColor: Kirigami.Theme.backgroundColor
+    property var alternateBackgroundColor: Kirigami.Theme.alternateBackgroundColor
 
     property var preparedSystemMonitorSources: []
 
     ListModel {
-        id: resourcesModel
+        id: resourcesList
     }
-
+    
+    TableModel {
+        id: resourcesModel
+        TableModelColumn {
+            display: "source"
+        }
+        TableModelColumn {
+            display: "alias"
+        }
+        TableModelColumn {
+            display: "action"
+        }
+    }
+    
     ListModel {
         id: comboboxModel
     }
@@ -32,23 +50,28 @@ Item {
 
     Component.onCompleted: {
 
-        systemmonitorDS.sources.forEach(function (source) {
-
-            if ((source.indexOf('lmsensors/') === 0 || source.indexOf('acpi/Thermal_Zone/') === 0)
-                && !source.match(/\/fan[0-9]*$/) ) {
-
-                comboboxModel.append({
-                    text: source,
-                    val: source
-                })
-
-                print('source to combo: ' + source)
-            }
-        })
+        // systemmonitorDS.sources.forEach(function (source) {
+        // 
+        //     if ((source.indexOf('lmsensors/') === 0 || source.indexOf('acpi/Thermal_Zone/') === 0)
+        //         && !source.match(/\/fan[0-9]*$/) ) {
+        // 
+        //         comboboxModel.append({
+        //             text: source,
+        //             val: source
+        //         })
+        // 
+        //         print('source to combo: ' + source)
+        //     }
+        // })
 
         var resources = ConfigUtils.getResourcesObjectArray()
         resources.forEach(function (resourceObj) {
-            resourcesModel.append(resourceObj)
+            resourcesList.append(resourceObj)
+            resourcesModel.appendRow({
+                source: resourceObj.sourceName,
+                alias: resourceObj.alias,
+                actions: 0
+            })
         })
     }
 
@@ -90,8 +113,8 @@ Item {
 
     function resourcesModelChanged() {
         var newResourcesArray = []
-        for (var i = 0; i < resourcesModel.count; i++) {
-            var obj = resourcesModel.get(i)
+        for (var i = 0; i < resourcesList.count; i++) {
+            var obj = resourcesList.get(i)
             newResourcesArray.push({
                 sourceName: obj.sourceName,
                 alias: obj.alias,
@@ -112,31 +135,29 @@ Item {
         // set dialog title
         addResourceDialog.addResource = temperatureObj === null
         addResourceDialog.editResourceIndex = editResourceIndex
-
+        
         temperatureObj = temperatureObj || {
             alias: '',
             overrideLimitTemperatures: false,
             meltdownTemperature: 90,
             warningTemperature: 70
         }
-
+        
         // set combobox
         reloadComboboxModel(temperatureObj)
-
+        
         // alias
         aliasTextfield.text = temperatureObj.alias
         showAlias.checked = !!temperatureObj.alias
-
+        
         // temperature overrides
         overrideLimitTemperatures.checked = temperatureObj.overrideLimitTemperatures
         warningTemperatureItem.value = temperatureObj.warningTemperature
         meltdownTemperatureItem.value = temperatureObj.meltdownTemperature
-
+        
         // open dialog
         addResourceDialog.open()
-
     }
-
 
     Dialog {
         id: addResourceDialog
@@ -153,28 +174,32 @@ Item {
 
         property bool virtualSelected: true
 
-        standardButtons: StandardButton.Ok | StandardButton.Cancel
+        footer: DialogButtonBox {
+            id: dialogButtons
+            standardButtons: Dialog.Ok | Dialog.Cancel
+        }
+
 
         property int sourceTypeSwitch: 0
 
         property var groupSources: []
 
-        ExclusiveGroup {
+        ButtonGroup {
             id: sourceTypeGroup
         }
 
-        onSourceTypeSwitchChanged: {
-            switch (sourceTypeSwitch) {
-            case 0:
-                sourceTypeGroup.current = singleSourceTypeRadio;
-                break;
-            case 1:
-                sourceTypeGroup.current = multipleSourceTypeRadio;
-                break;
-            default:
-            }
-            setVirtualSelected()
-        }
+        // onSourceTypeSwitchChanged: {
+        //     switch (sourceTypeSwitch) {
+        //     case 0:
+        //         sourceTypeGroup.current = singleSourceTypeRadio;
+        //         break;
+        //     case 1:
+        //         sourceTypeGroup.current = multipleSourceTypeRadio;
+        //         break;
+        //     default:
+        //     }
+        //     setVirtualSelected()
+        // }
 
         function setVirtualSelected() {
             virtualSelected = sourceTypeSwitch === 1
@@ -207,9 +232,18 @@ Item {
             }
 
             if (addResourceDialog.addResource) {
-                resourcesModel.append(newObject)
+                resourcesModel.appendRow({
+                    source: newObject.sourceName,
+                    alias: newObject.alias,
+                    actions: 0
+                })
+                resourcesList.append(newObject)
             } else {
-                resourcesModel.set(addResourceDialog.editResourceIndex, newObject)
+                resourcesModel.setRow(addResourceDialog.editResourceIndex, {
+                    source: newObject.sourceName,
+                    alias: newObject.alias
+                })
+                resourcesList.set(addResourceDialog.editResourceIndex, newObject)
             }
 
 
@@ -220,9 +254,10 @@ Item {
         GridLayout {
             columns: 2
 
+
             RadioButton {
                 id: singleSourceTypeRadio
-                exclusiveGroup: sourceTypeGroup
+                ButtonGroup.group: sourceTypeGroup
                 text: i18n("Source")
                 onCheckedChanged: {
                     if (checked) {
@@ -234,6 +269,7 @@ Item {
             }
             ComboBox {
                 id: sourceCombo
+                textRole: "text"
                 Layout.preferredWidth: tableWidth/2
                 model: comboboxModel
                 enabled: !addResourceDialog.virtualSelected
@@ -241,7 +277,7 @@ Item {
 
             RadioButton {
                 id: multipleSourceTypeRadio
-                exclusiveGroup: sourceTypeGroup
+                ButtonGroup.group: sourceTypeGroup
                 text: i18n("Group of sources")
                 onCheckedChanged: {
                     if (checked) {
@@ -251,28 +287,33 @@ Item {
                 }
                 Layout.alignment: Qt.AlignTop
             }
-            ListView {
-                id: checkboxesSourcesListView
-                model: checkboxesSourcesModel
-                delegate: CheckBox {
-                    text: val
-                    checked: checkboxChecked
-                    onCheckedChanged: {
-                        if (checked) {
-                            if (addResourceDialog.groupSources.indexOf(val) === -1) {
-                                addResourceDialog.groupSources.push(val)
-                            }
-                        } else {
-                            var idx = addResourceDialog.groupSources.indexOf(val)
-                            if (idx !== -1) {
-                                addResourceDialog.groupSources.splice(idx, 1)
+            ScrollView {
+                ListView {
+                    id: checkboxesSourcesListView
+                    model: checkboxesSourcesModel
+                    delegate: CheckBox {
+                        text: val
+                        checked: checkboxChecked
+                        onCheckedChanged: {
+                            if (checked) {
+                                if (addResourceDialog.groupSources.indexOf(val) === -1) {
+                                    addResourceDialog.groupSources.push(val)
+                                }
+                            } else {
+                                var idx = addResourceDialog.groupSources.indexOf(val)
+                                if (idx !== -1) {
+                                    addResourceDialog.groupSources.splice(idx, 1)
+                                }
                             }
                         }
                     }
+                    enabled: addResourceDialog.virtualSelected
+                    Layout.preferredWidth: tableWidth/2
+                    Layout.preferredHeight: tableHeight/2
                 }
-                enabled: addResourceDialog.virtualSelected
-                Layout.preferredWidth: tableWidth/2
-                Layout.preferredHeight: tableHeight/2
+                
+                implicitHeight: 200
+                implicitWidth: 800
             }
 
             Item {
@@ -325,8 +366,8 @@ Item {
             SpinBox {
                 id: warningTemperatureItem
                 stepSize: 10
-                minimumValue: 10
-                maximumValue: 200
+                from: 10
+                to: 200
                 enabled: overrideLimitTemperatures.checked
             }
 
@@ -337,8 +378,8 @@ Item {
             SpinBox {
                 id: meltdownTemperatureItem
                 stepSize: 10
-                minimumValue: 10
-                maximumValue: 200
+                from: 10
+                to: 200
                 enabled: overrideLimitTemperatures.checked
             }
 
@@ -364,111 +405,157 @@ Item {
             width: 2
             height: 2
         }
+        
+        HorizontalHeaderView {
+            id: myhorizontalHeader
+            // anchors.left: mytableView.left
+            // anchors.leftMargin: 0
+            // anchors.topMargin: 2
+            // anchors.top: parent.top
+            // anchors.right: parent.right
+            // anchors.rightMargin: 2
 
-        TableView {
-
-            headerVisible: true
-
-            Label {
-                text: i18n('Add resources by clicking "+" button.')
-                anchors.centerIn: parent
-                visible: resourcesModel.count === 0
-            }
-
-            TableViewColumn {
-                role: 'sourceName'
-                title: i18n('Source')
-                width: tableWidth * 0.6
-                delegate: MouseArea {
-                    anchors.fill: parent
-                    Label {
-                        text: styleData.value
-                        elide: Text.ElideRight
-                        anchors.left: parent.left
-                        anchors.leftMargin: 5
-                        anchors.right: parent.right
-                        anchors.rightMargin: 5
-                    }
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        fillAddResourceDialogAndOpen(resourcesModel.get(styleData.row), styleData.row)
-                    }
+            syncView: mytableView
+            clip: true
+            model: ListModel {
+                Component.onCompleted: {
+                    append({ display: i18n("Source") });
+                    append({ display: i18n("Alias") });
+                    append({ display: i18n("Action") });
                 }
             }
+            Layout.preferredWidth: tableWidth
+            Layout.columnSpan: 2
+        }
 
-            TableViewColumn {
-                role: 'alias'
-                title: i18n('Alias')
-                width: tableWidth * 0.15
-                delegate: MouseArea {
-                    anchors.fill: parent
-                    Label {
-                        text: styleData.value
-                        elide: Text.ElideRight
-                        anchors.left: parent.left
-                        anchors.leftMargin: 5
-                        anchors.right: parent.right
-                        anchors.rightMargin: 5
-                    }
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        fillAddResourceDialogAndOpen(resourcesModel.get(styleData.row), styleData.row)
-                    }
+        ScrollView {
+            id: resourcesTable
+            width: parent.width
+            clip: true
+
+
+            TableView {
+                anchors.fill: parent
+                property var columnWidths: [30, 40, 30]
+                columnWidthProvider: function (column) {
+                    let aw = resourcesTable.width - resourcesTable.effectiveScrollBarWidth
+                    return parseInt(aw * columnWidths[column] / 100 )
+
                 }
-            }
 
-            TableViewColumn {
-                title: i18n('Action')
-                width: tableWidth * 0.25 - 4
+                implicitHeight: 200
+                implicitWidth: 800
+                clip: true
+                interactive: true
+                rowSpacing: 1
+                columnSpacing: 1
+                boundsBehavior: Flickable.StopAtBounds
+                model: resourcesModel
+                id: mytableView
+                alternatingRows: true
 
-                delegate: Item {
+                selectionBehavior: TableView.SelectRows
+                selectionModel: ItemSelectionModel {}
 
-                    GridLayout {
-                        height: parent.height
-                        columns: 3
-                        rowSpacing: 0
+                delegate: myChooser
 
-                        Button {
-                            iconName: 'go-up'
-                            Layout.fillHeight: true
-                            onClicked: {
-                                resourcesModel.move(styleData.row, styleData.row - 1, 1)
-                                resourcesModelChanged()
-                            }
-                            enabled: styleData.row > 0
-                        }
-
-                        Button {
-                            iconName: 'go-down'
-                            Layout.fillHeight: true
-                            onClicked: {
-                                resourcesModel.move(styleData.row, styleData.row + 1, 1)
-                                resourcesModelChanged()
-                            }
-                            enabled: styleData.row < resourcesModel.count - 1
-                        }
-
-                        Button {
-                            iconName: 'list-remove'
-                            Layout.fillHeight: true
-                            onClicked: {
-                                resourcesModel.remove(styleData.row)
-                                resourcesModelChanged()
+                DelegateChooser {
+                    id: myChooser
+                    DelegateChoice {
+                        column: 0
+                        delegate: Rectangle {
+                            color: (row % 2) === 0 ? backgroundColor : alternateBackgroundColor
+                            Text {
+                                text: display
+                                color: Kirigami.Theme.textColor
+                                font.family: Kirigami.Theme.defaultFont.family
+                                font.pixelSize: 0
+                                anchors.verticalCenter: parent.verticalCenter
                             }
                         }
                     }
+                    DelegateChoice {
+                        column: 1
+                        delegate: Rectangle {
+                            color: (row % 2) === 0 ? backgroundColor : alternateBackgroundColor
+                            Text {
+                                text: display
+                                color: Kirigami.Theme.textColor
+                                font.family: Kirigami.Theme.defaultFont.family
+                                anchors.verticalCenter: parent.verticalCenter
+                                elide: Text.ElideRight
+                                clip: true
+                            }
+                        }
+                    }
+                    DelegateChoice {
+                        column: 2
+                        delegate: GridLayout {
+                            columnSpacing: 1
+                            Text {
+                                visible: false
+                                text: display
+                            }
+                            Button {
+                                icon.name: 'go-up'
+                                enabled: row === 0  ? false : true
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        if (row > 0) {
+                                            resourcesModel.moveRow(row, row - 1, 1)
+                                            resourcesList.move(row, row - 1, 1)
+                                            resourcesModelChanged()
+                                        }
+                                    }
+                                }
+                            }
+                            Button {
+                                icon.name: 'go-down'
+                                enabled: row == (resourcesModel.rowCount - 1)  ? false: true
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        if (row < resourcesModel.rowCount) {
+                                            resourcesModel.moveRow(row, row + 1, 1)
+                                            resourcesList.move(row, row + 1, 1)
+                                            resourcesModelChanged()
+                                        }
+                                    }
+                                }
+                            }
+                            Button {
+                                icon.name: 'list-remove'
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        resourcesModel.removeRow(row)
+                                        resourcesList.remove(row)
+                                        resourcesModelChanged()
+                                    }
+                                }
+                            }
+                            Button {
+                                icon.name: 'entry-edit'
+                                MouseArea {
+                                    anchors.fill: parent
+                                    onClicked: {
+                                        fillAddResourceDialogAndOpen(resourcesList.get(row), row)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
             }
-
-            model: resourcesModel
-
             Layout.preferredHeight: 150
             Layout.preferredWidth: tableWidth
             Layout.columnSpan: 2
         }
+      
         Button {
             id: buttonAddResource
-            iconName: 'list-add'
+            icon.name: 'list-add'
             Layout.preferredWidth: 100
             Layout.columnSpan: 2
             onClicked: {
@@ -500,8 +587,8 @@ Item {
         SpinBox {
             id: warningTemperatureSpinBox
             stepSize: 1
-            minimumValue: 10
-            maximumValue: 200
+            from: 10
+            to: 200
         }
 
         Label {
@@ -511,19 +598,19 @@ Item {
         SpinBox {
             id: meltdownTemperatureSpinBox
             stepSize: 1
-            minimumValue: 10
-            maximumValue: 200
+            from: 10
+            to: 200
         }
 
     }
 
-    PlasmaCore.DataSource {
-        id: systemmonitorDS
-        engine: 'systemmonitor'
-        interval: 500
-    }
+    // Plasma5Support.DataSource {
+    //     id: systemmonitorDS
+    //     engine: 'systemmonitor'
+    //     interval: 500
+    // }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: udisksDS
         engine: 'executable'
 
@@ -531,7 +618,7 @@ Item {
 
         property bool prepared: false
 
-        onNewData: {
+        onNewData: (sourceName, data) => {
             if (!prepared)
             {
                 if (data['exit code'] > 0) {
@@ -556,24 +643,24 @@ Item {
         }
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: nvmeDS
         engine: 'executable'
-
-        connectedSources: ['sudo nvme list -o json | jq -r ".Devices | map(.DevicePath)"']
-
+    
+        connectedSources: ['sudo -n nvme list -o json | jq -r ".Devices | map(.DevicePath)"']
+    
         property bool prepared: false
-
-        onNewData: {
+    
+        onNewData: (sourceName, data) => {
             if (!prepared)
             {
                 if (data['exit code'] > 0) {
                     print('New data incomming. Source: ' + sourceName + ', ERROR: ' + data.stderr);
                     return
                 }
-
+    
                 print('New data incomming. Source: ' + sourceName + ', data: ' + data.stdout);
-
+    
                 var pathsToCheck = ModelUtils.parseNvmePaths(data.stdout)
                 pathsToCheck.forEach(function (pathObj) {
                     var cmd = ModelUtils.NVME_VIRTUAL_PATH_PREFIX + pathObj.name
@@ -582,31 +669,31 @@ Item {
                         val: cmd
                     })
                 })
-
+    
                 prepared = true
-
+    
             }
         }
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: smartctlDS
         engine: 'executable'
-
+    
         connectedSources: ['sudo -n smartctl --scan-open --json=c | jq -r ".devices | map(.name)"']
-
+    
         property bool prepared: false
-
-        onNewData: {
+    
+        onNewData: (sourceName, data) => {
             if (!prepared)
             {
                 if (data['exit code'] > 0) {
                     print('New data incomming. Source: ' + sourceName + ', ERROR: ' + data.stderr);
                     return
                 }
-
+    
                 print('New data incomming. Source: ' + sourceName + ', data: ' + data.stdout);
-
+    
                 var pathsToCheck = ModelUtils.parseSmartctlPaths(data.stdout)
                 pathsToCheck.forEach(function (pathObj) {
                     var cmd = ModelUtils.SMARTCTL_VIRTUAL_PATH_PREFIX + pathObj.name
@@ -615,14 +702,14 @@ Item {
                         val: cmd
                     })
                 })
-
+    
                 prepared = true
-
+    
             }
         }
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: nvidiaDS
         engine: 'executable'
 
@@ -630,7 +717,7 @@ Item {
 
         property bool prepared: false
 
-        onNewData: {
+        onNewData: (sourceName, data) => { 
             if (!prepared)
             {
                 if (data['exit code'] > 0) {
@@ -648,7 +735,7 @@ Item {
         }
     }
 
-    PlasmaCore.DataSource {
+    Plasma5Support.DataSource {
         id: atiDS
         engine: 'executable'
 
@@ -656,7 +743,7 @@ Item {
 
         property bool prepared: false
 
-        onNewData: {
+        onNewData: (sourceName, data) => {
             if (!prepared)
             {
                 if (data['exit code'] > 0) {
