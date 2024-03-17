@@ -1,31 +1,12 @@
 Thermal Monitor
 ---------------
-Plasma 5 applet for monitoring CPU, GPU and other available temperature sensors.
+Plasma 6 applet for monitoring CPU, GPU and other available temperature sensors.
+
+**Work in progress, consider it to be non-functional for now.**
 
 Originally from: https://github.com/kotelnik/plasma-applet-thermal-monitor
+Updates from: https://gitlab.com/agurenko/plasma-applet-thermal-monitor
 I have no affiliation with this project, but I'm trying to maintain the repository and invite to open MR, should you want to get fixes into master.
-
-# Requirements
-## Fedora
-
-Packages:
-- `kf5-plasma-devel`
-- `extra-cmake-modules`
-
-## Arch
-
-Packages:
-- `plasma-workspace`
-- `qt5-graphicaleffects`
-- `extra-cmake-modules`
-
-Alternatively, you can use the [plasma5-applets-thermal-monitor-git](https://aur.archlinux.org/packages/plasma5-applets-thermal-monitor-git/) AUR package.
-## Requirements for Kubuntu
-
-Packages:
-- `libkf5plasma-dev`
-- `build-essential`
-- `extra-cmake-modules`
 
 # INSTALLATION
 
