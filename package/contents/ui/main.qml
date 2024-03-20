@@ -56,9 +56,6 @@ PlasmoidItem {
     property double iconBottomMargin: itemHeight * plasmoid.configuration.iconBottomMargin * 0.01
     property bool enableLabelDropShadow: plasmoid.configuration.enableLabelDropShadow
 
-    property var systemmonitorAvailableSources
-    property var systemmonitorSourcesToAdd
-
     property int numberOfParts: temperatureModel.count
 
     property double parentWidth: parent !== null ? parent.width : 0
@@ -181,10 +178,10 @@ PlasmoidItem {
     }
 
     function getSystemmonitorAvailableSources() {
-        if (!systemmonitorAvailableSources) {
-            systemmonitorAvailableSources = systemmonitorDS.sources
+        if (!lmsensorsAvailableSources) {
+            lmsensorsAvailableSources = lmsensorsDS.sources
         }
-        return systemmonitorAvailableSources
+        return lmsensorsAvailableSources
     }
 
     function action_reloadSources() {
@@ -199,17 +196,9 @@ PlasmoidItem {
 
         temperatureModel.clear()
 
-        if (!systemmonitorAvailableSources) {
-            systemmonitorAvailableSources = []
+        if (lmsensorsDS.connectedSources === undefined) {
+            lmsensorsDS.connectedSources = []
         }
-
-        if (!systemmonitorSourcesToAdd) {
-            systemmonitorSourcesToAdd = []
-        }
-
-        // if (systemmonitorDS.connectedSources === undefined) {
-        //     systemmonitorDS.connectedSources = []
-        // }
 
         if (udisksDS.connectedSources === undefined) {
             udisksDS.connectedSources = []
@@ -231,8 +220,8 @@ PlasmoidItem {
             smartctlDS.connectedSources = []
         }
 
-        systemmonitorSourcesToAdd.length = 0
-        // systemmonitorDS.connectedSources.length = 0
+        lmsensorsDS.connectedSources.length = 0
+        lmsensorsDS.cmdSourceBySourceName = {}
         udisksDS.connectedSources.length = 0
         udisksDS.cmdSourceBySourceName = {}
         nvidiaDS.connectedSources.length = 0
@@ -316,16 +305,9 @@ PlasmoidItem {
             addToSourcesOfDatasource(smartctlDS, cmdSource)
         }
         else {
+            dbgprint('adding source to lmsensorsDS: ' + source)
 
-            dbgprint('adding source to systemmonitorDS: ' + source)
-
-            if (getSystemmonitorAvailableSources().indexOf(source) > -1) {
-                dbgprint('adding to connected')
-                addToSourcesOfDatasource(systemmonitorDS, source)
-            } else {
-                dbgprint('adding to sta')
-                systemmonitorSourcesToAdd.push(source)
-            }
+            addToSourcesOfDatasource(lmsensorsDS, ModelUtils.LMSENSORS_CMD)
 
         }
 
@@ -340,39 +322,25 @@ PlasmoidItem {
         datasource.connectedSources.push(sourceName)
     }
 
-    // Plasma5Support.DataSource {
-    //     id: systemmonitorDS
-    //     engine: 'systemmonitor'
-    // 
-    //     property string lmSensorsStart: 'lmsensors/'
-    //     property string acpiStart: 'acpi/Thermal_Zone/'
-    // 
-    //     onSourceAdded: {
-    // 
-    //         if (source.indexOf(lmSensorsStart) === 0 || source.indexOf(acpiStart) === 0) {
-    // 
-    //             systemmonitorAvailableSources.push(source)
-    //             var staIndex = systemmonitorSourcesToAdd.indexOf(source)
-    //             if (staIndex > -1) {
-    //                 addToSourcesOfDatasource(systemmonitorDS, source)
-    //                 systemmonitorSourcesToAdd.splice(staIndex, 1)
-    //             }
-    // 
-    //         }
-    // 
-    //     }
-    // 
-    //     onNewData: (sourceName, data) => {
-    //         var temperature = 0
-    //         if (data.value === undefined) {
-    //             dbgprint('data for source ' + sourceName + ' not yet available')
-    //         } else {
-    //             temperature = parseFloat(data.value)
-    //         }
-    //         ModelUtils.updateTemperatureModel(temperatureModel, sourceName, temperature)
-    //     }
-    //     interval: updateInterval
-    // }
+    Plasma5Support.DataSource {
+        id: lmsensorsDS
+        engine: 'executable'
+    
+        property var cmdSourceBySourceName
+    
+        onNewData: (sourceName, data) => {
+            if (data['exit code'] > 0) {
+                print('New data incomming. Source: ' + sourceName + ', ERROR: ' + data.stderr);
+                return
+            }
+
+            var paths = ModelUtils.parseLmSensorsOutput(data.stdout)
+            for (var path in paths) {
+                ModelUtils.updateTemperatureModel(temperatureModel, path, parseFloat(paths[path]))
+            }
+        }
+        interval: updateInterval
+    }
 
     Plasma5Support.DataSource {
         id: udisksDS

@@ -50,19 +50,14 @@ Item {
 
     Component.onCompleted: {
 
-        // systemmonitorDS.sources.forEach(function (source) {
-        // 
-        //     if ((source.indexOf('lmsensors/') === 0 || source.indexOf('acpi/Thermal_Zone/') === 0)
-        //         && !source.match(/\/fan[0-9]*$/) ) {
-        // 
-        //         comboboxModel.append({
-        //             text: source,
-        //             val: source
-        //         })
-        // 
-        //         print('source to combo: ' + source)
-        //     }
-        // })
+        lmsensorsDS.sources.forEach(function (source) {
+            comboboxModel.append({
+                text: source,
+                val: source
+            })
+    
+            print('source to combo: ' + source)
+        })
 
         var resources = ConfigUtils.getResourcesObjectArray()
         resources.forEach(function (resourceObj) {
@@ -603,12 +598,38 @@ Item {
         }
 
     }
-
-    // Plasma5Support.DataSource {
-    //     id: systemmonitorDS
-    //     engine: 'systemmonitor'
-    //     interval: 500
-    // }
+    
+    Plasma5Support.DataSource {
+        id: lmsensorsDS
+        engine: 'executable'
+    
+        connectedSources: [ModelUtils.LMSENSORS_CMD]
+    
+        property bool prepared: false
+    
+        onNewData: (sourceName, data) => {
+            if (!prepared)
+            {
+                if (data['exit code'] > 0) {
+                    print('New data incomming. Source: ' + sourceName + ', ERROR: ' + data.stderr);
+                    return
+                }
+    
+                print('New data incomming. Source: ' + sourceName + ', data: ' + data.stdout);
+    
+                var pathsToCheck = ModelUtils.parseLmSensorsOutput(data.stdout)
+                for (var path in pathsToCheck){
+                    comboboxModel.append({
+                        text: path,
+                        val: path
+                    })
+                }
+    
+                prepared = true
+    
+            }
+        }
+    }
 
     Plasma5Support.DataSource {
         id: udisksDS

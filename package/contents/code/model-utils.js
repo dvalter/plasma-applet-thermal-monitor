@@ -239,3 +239,28 @@ function getSmartctlTemperatureCmd(diskLabel) {
 function toCelsia(kelvin) {
     return kelvin - 273.15
 }
+
+var LMSENSORS_CMD = 'sensors -j'
+var LMSENSORS_PREFIX = 'lmsensors/'
+
+function parseLmSensorsOutput(stdout) {
+    var data = JSON.parse(stdout)
+    var metrics = {}
+    for (var deviceName in data) {
+        var deviceData = data[deviceName]
+        for (var key in deviceData) {
+            if (key === 'Adapter') {
+                continue
+            }
+            var sensorData = deviceData[key]
+            for (var value in sensorData) {
+                if (value.endsWith('_input')) {
+                    var sensorName = LMSENSORS_PREFIX + deviceName.replace(' ', '_') + '/' + key.replace(' ', '_')
+                    metrics[sensorName] = sensorData[value]
+                }
+            }
+        }
+    }
+    
+    return metrics
+}
