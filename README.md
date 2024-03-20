@@ -2,7 +2,19 @@ Thermal Monitor
 ---------------
 Plasma 6 applet for monitoring CPU, GPU and other available temperature sensors.
 
-**Work in progress, consider it to be non-functional for now.**
+**Known issues:**
+
+* Source editing is broken. For now please backup your `~/.config/plasma-org.kde.plasma.desktop-appletsrc` before trying.
+* ACPI metrics are not supported due to ksysguard deprecation.
+* Shadows are commented out.
+* UI may look meh sometimes.
+
+**Works:**
+* Starting with an old config
+* Group sources
+* UDisks
+* lm-sensors (including batteries, fans etc)
+* ATI/Nvidia/NVME sensors (presumably, not tested)
 
 Originally from: https://github.com/kotelnik/plasma-applet-thermal-monitor
 Updates from: https://gitlab.com/agurenko/plasma-applet-thermal-monitor
