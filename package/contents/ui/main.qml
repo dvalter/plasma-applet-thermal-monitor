@@ -67,7 +67,7 @@ PlasmoidItem {
     Layout.preferredWidth: widgetWidth
     Layout.preferredHeight: widgetHeight
 
-    property bool debugLogging: true // FIXME
+    property bool debugLogging: false
 
     function dbgprint(msg) {
         if (!debugLogging) {
